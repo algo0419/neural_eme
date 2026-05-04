@@ -14,6 +14,9 @@ pyyaml==6.0.1
 # Optimization and computation tools
 ray==2.37.0
 
+# ML surrogate training
+torch>=2.3.0
+
 # Logging and utilities
 tqdm==4.66.5
 
