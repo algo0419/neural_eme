@@ -1,0 +1,58 @@
+DReME smoke test summary
+repo_root: C:\Users\Junhyung\Desktop\neural_eme
+dataset_dir: C:\Users\Junhyung\Desktop\neural_eme\sample_datasets\Si_rectangular_single_waveguide
+geometry: LinearTaper(input_width=1e-6, output_width=2e-6, length=10e-6)
+S-matrix shape: (100, 26, 26)
+input amplitudes length: 5
+mode labels: forward_mode_1, forward_mode_2, forward_mode_3, forward_mode_4, forward_mode_5, forward_mode_6, forward_mode_7, forward_mode_8, forward_mode_9, forward_mode_10, forward_mode_11, forward_mode_12, forward_mode_13, backward_mode_1, backward_mode_2, backward_mode_3, backward_mode_4, backward_mode_5, backward_mode_6, backward_mode_7, backward_mode_8, backward_mode_9, backward_mode_10, backward_mode_11, backward_mode_12, backward_mode_13
+output amplitudes:
+  [00] +7.331810e-01-6.798617e-01j
+  [01] +2.232067e-07-4.906753e-07j
+  [02] -2.600882e-08-6.900453e-08j
+  [03] +2.498930e-02+1.573526e-02j
+  [04] -6.139787e-04+5.061475e-04j
+  [05] -8.931035e-06-4.347106e-06j
+  [06] +3.118989e-06-2.431055e-06j
+  [07] +2.578781e-03+6.919848e-03j
+  [08] -6.892057e-06+4.306317e-07j
+  [09] +0.000000e+00+0.000000e+00j
+  [10] +0.000000e+00+0.000000e+00j
+  [11] +0.000000e+00+0.000000e+00j
+  ... (14 more)
+output intensities:
+  [00] 9.997663e-01
+  [01] 2.905835e-13
+  [02] 5.438084e-15
+  [03] 8.720635e-04
+  [04] 6.331552e-07
+  [05] 9.866073e-11
+  [06] 1.563812e-11
+  [07] 5.453441e-05
+  [08] 4.768589e-11
+  [09] 0.000000e+00
+  [10] 0.000000e+00
+  [11] 0.000000e+00
+  [12] 0.000000e+00
+  [13] 4.502581e-08
+  [14] 6.571410e-17
+  [15] 8.393412e-16
+  [16] 3.348836e-07
+  [17] 4.161633e-08
+  [18] 6.192952e-12
+  [19] 1.635821e-12
+  [20] 2.311580e-08
+  [21] 6.188194e-12
+  [22] 9.121564e-10
+  [23] 0.000000e+00
+  [24] 0.000000e+00
+  [25] 0.000000e+00
+tracking mode names:
+[[ 0  1  2 ...  7  8  9]
+ [ 0  1  2 ...  7  8  9]
+ [ 0  1  2 ...  7  8  9]
+ ...
+ [ 0  1  3 ...  6  8 12]
+ [ 0  1  3 ...  6  8 12]
+ [ 0  1  3 ...  6  8 12]]
+saved_npz: C:\Users\Junhyung\Desktop\neural_eme\outputs\smoke_test_result.npz
+saved_summary: C:\Users\Junhyung\Desktop\neural_eme\outputs\smoke_test_summary.txt
