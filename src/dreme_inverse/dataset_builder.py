@@ -137,6 +137,8 @@ def default_run_config(repo_root: str | Path) -> Dict[str, Any]:
             "force_unitary": False,
             "force_passive": False,
             "verbose": False,
+            "suppress_expected_warnings": True,
+            "ray_logging_level": "ERROR",
         }
     )
     return config

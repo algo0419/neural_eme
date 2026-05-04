@@ -6,7 +6,12 @@ DataUpdater -> Geometry -> EME -> Runner.
 
 from __future__ import annotations
 
+import contextlib
+import io
+import logging
+import os
 import sys
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -16,6 +21,10 @@ import numpy as np
 RESPONSE_SIZE = 5
 REQUIRED_DATASET_FILES = ("dataset_info.py", "neff.pkl", "TE_pol.pkl", "overlap.pkl")
 _DATASET_CACHE: Dict[Tuple[str, bool], Any] = {}
+_EXPECTED_RUNTIME_NOTES = (
+    "The Lumerical API import warning is expected when using the precomputed dataset with is_testmode=True.",
+    "Upstream runner plotting strings can emit SyntaxWarning for '$\\mu$m'; this is unrelated to DReME evaluation.",
+)
 
 
 def run_dreme(z: np.ndarray, config: dict) -> dict:
@@ -28,15 +37,25 @@ def run_dreme(z: np.ndarray, config: dict) -> dict:
     metadata: Dict[str, Any] = {}
     try:
         config = dict(config or {})
+        _configure_runtime_noise_filters(config)
         repo_root = _repo_root(config)
         dataset_path = _dataset_path(config, repo_root)
         _validate_dataset_path(dataset_path)
         _ensure_import_paths(repo_root)
         _preinitialize_ray(repo_root, config)
 
-        import em_simulation as sim
+        suppressed_stdout = ""
+        if bool(config.get("suppress_expected_warnings", True)):
+            with contextlib.redirect_stdout(io.StringIO()) as buffer:
+                import em_simulation as sim
 
-        dataset = _load_dataset(sim, dataset_path, bool(config.get("is_testmode", True)))
+                dataset = _load_dataset(sim, dataset_path, bool(config.get("is_testmode", True)))
+            suppressed_stdout = buffer.getvalue().strip()
+        else:
+            import em_simulation as sim
+
+            dataset = _load_dataset(sim, dataset_path, bool(config.get("is_testmode", True)))
+
         parameter_names = list(getattr(dataset, "parameter_names", dataset.get_parameter_names()))
         parameter_grid = getattr(dataset, "parameter_grid", dataset.get_parameter_grid())
         has_width = "top_width" in parameter_names
@@ -75,6 +94,10 @@ def run_dreme(z: np.ndarray, config: dict) -> dict:
         metadata["input_amplitudes"] = input_amplitudes
         metadata["smatrix_shape"] = tuple(smatrix.shape)
         metadata["tracking_mode_names"] = getattr(geometry, "_tracking_mode_names", None)
+        if bool(config.get("suppress_expected_warnings", True)):
+            metadata["runtime_notes"] = list(_EXPECTED_RUNTIME_NOTES)
+        if suppressed_stdout and bool(config.get("record_suppressed_stdout", False)):
+            metadata["suppressed_stdout"] = suppressed_stdout
 
         return {
             "response": response,
@@ -142,6 +165,13 @@ def _ensure_import_paths(repo_root: Path) -> None:
             sys.path.insert(0, path)
 
 
+def _configure_runtime_noise_filters(config: dict) -> None:
+    if not bool(config.get("suppress_expected_warnings", True)):
+        return
+    warnings.filterwarnings("ignore", category=SyntaxWarning, message=r".*invalid escape sequence.*")
+    os.environ.setdefault("PYTHONWARNINGS", "ignore::SyntaxWarning")
+
+
 def _preinitialize_ray(repo_root: Path, config: dict) -> None:
     if not bool(config.get("initialize_ray", True)):
         return
@@ -167,11 +197,21 @@ def _preinitialize_ray(repo_root: Path, config: dict) -> None:
             ],
         )
     )
+    env_vars = dict(config.get("ray_env_vars", {}))
+    if bool(config.get("suppress_expected_warnings", True)):
+        env_vars.setdefault("PYTHONWARNINGS", "ignore::SyntaxWarning")
+    runtime_env: Dict[str, Any] = {"working_dir": str(repo_root), "excludes": excludes}
+    if env_vars:
+        runtime_env["env_vars"] = env_vars
+
+    level_name = str(config.get("ray_logging_level", "ERROR")).upper()
+    logging_level = getattr(logging, level_name, logging.ERROR)
     ray.init(
         ignore_reinit_error=True,
         include_dashboard=False,
         log_to_driver=False,
-        runtime_env={"working_dir": str(repo_root), "excludes": excludes},
+        logging_level=logging_level,
+        runtime_env=runtime_env,
     )
 
 
