@@ -1,134 +1,138 @@
-# Dataset-Based Eigenmode Expansion (EME) Framework for Integrated Photonics
+# Neural EME / DReME Inverse Design Sandbox
 
-A fast, modular, and dataset-based **Eigenmode Expansion (EME)** simulation framework for integrated photonics.  
-This repository provides a reproducible workflow for analyzing **multimode photonic devices** using pre-computed datasets (effective indices and overlap integrals) generated from commercial FDE solvers such as **Lumerical MODE**.
+This repository builds on `thdwotjd/dataset-based-eme`, a dataset-based Eigenmode Expansion (EME) framework for integrated photonics. The added code provides a small, reusable DReME-style wrapper for generating machine-learning responses from geometry parameter vectors.
 
-> ⚠️ This project is under active development — APIs and directory structures may change as features mature.  
-> Feedback and contributions are welcome!
+The core upstream package remains in `em_simulation/`. The new wrapper code lives under `src/dreme_inverse/`.
 
----
+## What Is Added
 
-## Overview
+- `src/dreme_inverse/wrapper.py`: reusable `run_dreme(z, config) -> dict` API.
+- `scripts/smoke_test_dreme.py`: end-to-end smoke test using the sample dataset.
+- `scripts/test_run_dreme.py`: command-line test for one sampled design vector.
+- `outputs/smoke_test_summary.txt`: current smoke-test summary.
+- `outputs/smoke_test_result.npz`: saved smoke-test arrays.
 
-The dataset-based EME method accelerates optical simulations by separating **modal field calculation**, **overlap calculation**, and **propagation/coupling analysis**.  
-Once the dataset is generated (e.g., with Lumerical MODE), the EME solver computes transmission, reflection, and modal evolution with high accuracy and minimal computational cost.
+## Environment
 
-```markdown
-Dataset generation (mode field & overlap calculation using FDE)
-↓
-Dataset-based EME Solver
-↓
-Transmission, Reflection, Mode Coupling Analysis
+The upstream README lists Python 3.9-3.11, but the current dependency constraints resolved successfully here with Python 3.12. Python 3.14 did not work with the pinned `pillow==10.3.0`.
+
+Recommended local setup:
+
+```powershell
+python -m venv .venv312
+.\.venv312\Scripts\python.exe -m pip install --upgrade pip
+.\.venv312\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
----
-## Documentation
+If cloning fresh, make sure Git LFS data is present:
 
-Full project documentation is available on Read the Docs:
-
-<https://dataset-based-emedreme.readthedocs.io>
----
-
-## Repository Structure
-```markdown
-dataset-based-eme/
-├── config/                     # Configuration files (Lumerical API path, dataset naming conventions)
-├── em_simulation/              # Core EME solver modules
-├── examples/                   # Example scripts (start here!)
-├── sample_datasets/            # Example datasets
-│   └── Si_rectangular_single_waveguide/
-│       ├── dataset_info.py
-│       ├── neff.pkl
-│       ├── TE_pol.pkl
-│       ├── overlap.pkl
-│       └── wg_crosssection.lms
-├── requirements.txt            # Python dependencies
-└── README.md                   # This file
-```
----
-
-## Python Environment
-
-- Python **3.9–3.11**
-- Tested on **macOS** and **Windows**
-
----
-
-## Core Dependencies
-
-The following Python libraries are required to run the simulation and examples.
-
-```bash
-# Clone repository
-git clone https://github.com/thdwotjd/dataset-based-eme.git
-cd dataset-based-eme
-
-# (Optional) Create virtual environment using conda
-conda create -n venv python=3.11
-
-# Install dependencies
-pip install -r requirements.txt
+```powershell
+git lfs install
+git lfs pull
 ```
 
----
-##  Lumerical API Configuration
+The sample dataset requires real pickle files under:
 
-To enable Python–Lumerical communication, ensure your Lumerical installation’s Python API path is included in your environment variables.
-Adjust the parameters in config/config.yaml by modifying ansys_path and ansys_api_path according to your system configuration.
-
----
-## Quick Start
-
-1. Clone and Install
-```bash
-git clone https://github.com/thdwotjd/dataset-based-eme.git
-cd dataset-based-eme
-pip install -r requirements.txt
+```text
+sample_datasets/Si_rectangular_single_waveguide/
 ```
 
-2. Run the Example
+## Smoke Test
 
-Open and run the Jupyter notebook:
-```bash
-examples/Si_linear_taper_simul.ipynb
+Run the existing end-to-end check:
+
+```powershell
+.\.venv312\Scripts\python.exe scripts\smoke_test_dreme.py
 ```
 
-It includes:
-- Dataset loading
-- Transfer matrix calculation
-- Plot generation and analysis
+Expected outputs:
 
----
-## Concept: Dataset-Based EME
+```text
+outputs/smoke_test_result.npz
+outputs/smoke_test_summary.txt
+```
 
-Traditional EME repeatedly calls mode solvers, which is computationally expensive.
-Here, all mode field distributions and overlap integrals are pre-computed and stored as datasets.
+The script follows:
 
-This separation enables:
-- ⚡ Fast sweeping over geometry
-- 🎯 Multimode coupling analysis between arbitrary waveguide sections
-- 🔁 Rapid optimization and inverse design workflows
+```text
+DataUpdater -> LinearTaper -> EME -> Runner
+```
 
----
-## Contributing
+It prints the S-matrix shape, output amplitudes, output intensities, and mode labels.
 
-We welcome community feedback and improvements:
-1. Fork the repository
-2.	Create a feature branch
-3.	Submit a pull request with a clear description
+## DReME Wrapper
 
-If you encounter bugs or have feature requests, please open an Issue on GitHub.
+The ML-facing API is:
 
----
-## Citation
+```python
+from dreme_inverse.wrapper import run_dreme
 
-If you use this framework or the associated datasets in your research, please cite the following paper:
-> Song, J. & Sohn, Y.-I.
-> Ultra-fast and accurate multimode waveguide design based on a dataset-based eigenmode expansion method.
-> Opt. Express 33, 46815–46827 (2025).
-> https://doi.org/10.1364/OE.567425
+result = run_dreme(z, config)
+```
 
-**Bibtex**
+Return format:
+
+```python
+{
+    "response": np.ndarray,
+    "raw_smatrix": np.ndarray | None,
+    "output_amplitudes": np.ndarray | None,
+    "metadata": dict,
+    "valid": bool,
+    "error": str | None,
+}
+```
+
+For the sample dataset, `dataset_info.py` exposes both `top_width` and `curvature`, so the wrapper uses the real upstream `SingleCustomBend` API. If a dataset only exposes width, it falls back to `CustomTaper`.
+
+The current response vector is:
+
+```text
+[
+  first output guided-mode intensity,
+  second output guided-mode intensity, or 0 if unavailable,
+  total transmitted guided-mode intensity,
+  loss = 1 - total transmitted guided-mode intensity,
+  relative phase between the first two guided output modes, or 0 if unavailable
+]
+```
+
+Run one wrapper test:
+
+```powershell
+.\.venv312\Scripts\python.exe scripts\test_run_dreme.py
+```
+
+## Example Config
+
+```python
+config = {
+    "dataset_path": "sample_datasets/Si_rectangular_single_waveguide",
+    "num_sections": 5,
+    "length": 10.0e-6,
+    "width_min": 1.2e-6,
+    "width_max": 2.0e-6,
+    "curvature_min": 0.0,
+    "curvature_max": 1.0e4,
+    "resolution": 500,
+    "return_raw_smatrix": False,
+}
+```
+
+For `SingleCustomBend`, `z` length must be `2 * num_sections`: first half controls widths and second half controls curvatures. Values are clipped to `[0, 1]` and mapped into physical ranges.
+
+## Notes
+
+- The Lumerical API warning during tests is expected when using `DataUpdater(..., is_testmode=True)` with precomputed data.
+- Ray is initialized by the EME matrix utilities. The wrapper pre-initializes Ray with exclusions so local virtual environments and datasets are not packaged into worker runtime archives.
+- The upstream sample dataset is large and Git LFS-backed, especially `overlap.pkl`.
+
+## Upstream Citation
+
+If using the dataset-based EME framework or datasets in research, cite:
+
+Song, J. and Sohn, Y.-I. "Ultra-fast and accurate multimode waveguide design based on a dataset-based eigenmode expansion method." Optics Express 33, 46815-46827 (2025). https://doi.org/10.1364/OE.567425
+
 ```bibtex
 @article{10.1364/oe.567425,
   author  = {Song, Jaesung and Sohn, Young-Ik},
@@ -141,17 +145,7 @@ If you use this framework or the associated datasets in your research, please ci
   doi     = {10.1364/OE.567425}
 }
 ```
----
+
 ## License
 
-
-This project is licensed under the MIT License 
-
----
-## Contact
-
-```markdown
-Maintainer:
-Jaesung Song (KAIST EE)
-📧 thdwotjd98@kaist.ac.kr￼
-```
+The upstream project is licensed under the MIT License.
