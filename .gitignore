@@ -201,6 +201,7 @@ data/
 outputs/dataset_analysis/
 outputs/forward_mlp/
 outputs/bend_problem/
+outputs/bend_pso/
 
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
