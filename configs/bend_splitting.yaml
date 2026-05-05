@@ -1,0 +1,62 @@
+dataset:
+  path: sample_datasets/Si_rectangular_single_waveguide
+  is_testmode: true
+
+bounds:
+  width_min: 0.000001
+  width_max: 0.000003
+  curvature_min: 0.0
+  curvature_max: 330000.0
+
+geometry:
+  # First MVP: fixed-width multimode bend with variable Bezier curvature.
+  fixed_width: 0.000002
+  variable_width: false
+  width_control_points: 4
+  width_endpoint_value: 0.5
+  width_endpoints_fixed: true
+
+  curvature_control_points: 6
+  curvature_endpoint_value: 0.0
+  curvature_parameter_max: 120000.0
+
+  # Increase eme_resolution toward 5000 for paper-style final validation.
+  profile_resolution: 100
+  eme_resolution: 500
+  total_length: 0.00003141592653589793
+  input_angle: 0.0
+  limit_mode_number: 0
+  verbose: false
+
+eme:
+  force_unitary: true
+  force_passive: false
+  return_raw_smatrix: false
+  return_lumped_smatrix: false
+
+fom:
+  curvature_limit: 325000.0
+  penalty_scale: 10000.0
+  penalty_power: 2.0
+  beta_power_error: 1.0
+
+runtime:
+  initialize_ray: true
+  ray_logging_level: ERROR
+  suppress_expected_warnings: true
+  record_suppressed_stdout: false
+  ray_excludes:
+    - .git/
+    - .venv/
+    - .venv312/
+    - sample_datasets/
+    - examples/
+    - outputs/
+    - data/
+    - __pycache__/
+
+test:
+  seed: 20260505
+  simple_curvature_control_value: 0.16
+  random_low: 0.02
+  random_high: 0.45
